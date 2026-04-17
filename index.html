@@ -66,7 +66,73 @@
             </div>
         </main>
     </div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
+<script>
+    // 1. SETUP - Replace with your actual credentials
+    const SUPABASE_URL = "https://gcgxcnbimqpfrowesfms.supabase.co";
+    const SUPABASE_KEY = "sb_publishable_XObSGljjo-VILprIHw_Bxw_FKM7uUOU
+"; // The 'sb_publishable' one
+    
+    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    // 2. FETCH DATA FROM SUPABASE
+    async function searchManuscripts() {
+        const searchTerm = document.getElementById('universalSearch').value;
+        const subjectFilter = document.getElementById('filterSubject').value;
+
+        // Start building the query
+        let query = supabase
+            .from('manuscripts')
+            .select('*');
+
+        // Apply Search Term if it exists (using Guruji's search_blob requirement)
+        if (searchTerm) {
+            query = query.ilike('search_blob', `%${searchTerm}%`);
+        }
+
+        // Apply Subject Filter
+        if (subjectFilter !== "All") {
+            query = query.eq('subject', subjectFilter);
+        }
+
+        const { data, error } = await query.limit(20);
+
+        if (error) {
+            console.error("Database Error:", error);
+            return;
+        }
+
+        render(data);
+    }
+
+    // 3. RENDER TO SCREEN
+    function render(data) {
+        const grid = document.getElementById('manuscriptGrid');
+        if (data.length === 0) {
+            grid.innerHTML = '<p class="col-span-2 text-stone-400 italic">No manuscripts found for this search.</p>';
+            return;
+        }
+
+        grid.innerHTML = data.map(m => `
+            <div class="bg-white border border-stone-200 rounded-xl p-6 hover:shadow-md transition cursor-pointer">
+                <div class="flex justify-between items-start mb-4">
+                    <span class="text-[10px] font-bold bg-stone-100 text-stone-500 px-2 py-1 rounded tracking-tighter">${m.catalog_no || 'Pending'}</span>
+                    <span class="text-[10px] uppercase font-bold text-orange-600 tracking-widest">${m.subject}</span>
+                </div>
+                <h3 class="serif text-xl text-stone-900">${m.title_iast}</h3>
+                <p class="text-stone-400 text-sm mb-4">${m.title_dev || 'Transcription in Progress'}</p>
+                <div class="flex justify-between text-[11px] text-stone-500 font-medium">
+                    <span>Author: ${m.author}</span>
+                    <span>Era: ${m.era}</span>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    // Run initial search on load
+    document.addEventListener('DOMContentLoaded', searchManuscripts);
+</script>
     <script>
         const manuscripts = [
             { id: "MS-VNS-001", dev: "तन्त्रालोकः", iast: "Tantrāloka", author: "Abhinavagupta", era: "10th CE", subject: "Kashmir Shaivism" },
