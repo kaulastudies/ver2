@@ -74,38 +74,26 @@
     const SUPABASE_KEY = "sb_publishable_XObSGljjo-VILprIHw_Bxw_FKM7uUOU
 "; // The 'sb_publishable' one
     
-    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    // Change this line
+const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    // 2. FETCH DATA FROM SUPABASE
-    async function searchManuscripts() {
-        const searchTerm = document.getElementById('universalSearch').value;
-        const subjectFilter = document.getElementById('filterSubject').value;
+// And update your search function to use the new name:
+async function searchManuscripts() {
+    const searchTerm = document.getElementById('universalSearch').value;
+    const subjectFilter = document.getElementById('filterSubject').value;
 
-        // Start building the query
-        let query = supabase
-            .from('manuscripts')
-            .select('*');
+    let { data, error } = await supabaseClient  // Use 'supabaseClient' here
+        .from('manuscripts')
+        .select('*')
+        .ilike('search_blob', `%${searchTerm}%`)
+        .limit(20);
 
-        // Apply Search Term if it exists (using Guruji's search_blob requirement)
-        if (searchTerm) {
-            query = query.ilike('search_blob', `%${searchTerm}%`);
-        }
-
-        // Apply Subject Filter
-        if (subjectFilter !== "All") {
-            query = query.eq('subject', subjectFilter);
-        }
-
-        const { data, error } = await query.limit(20);
-
-        if (error) {
-            console.error("Database Error:", error);
-            return;
-        }
-
-        render(data);
+    if (error) {
+        console.error("Database Error:", error);
+        return;
     }
-
+    render(data);
+}
     // 3. RENDER TO SCREEN
     function render(data) {
         const grid = document.getElementById('manuscriptGrid');
