@@ -3,52 +3,41 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Advanced Manuscript Research Portal</title>
+    <title>Kaula Research Archive - Live Portal</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Inter:wght@400;600&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #f8f5f2; }
         .serif { font-family: 'Playfair Display', serif; }
-        .sidebar { height: calc(100-vh - 80px); }
     </style>
 </head>
 <body>
 
-    <nav class="bg-white border-b border-stone-200 px-8 py-4 sticky top-0 z-50 flex justify-between items-center">
+    <nav class="bg-white border-b border-stone-200 px-8 py-4 sticky top-0 z-50 flex justify-between items-center shadow-sm">
         <div>
-            <span class="text-orange-700 font-bold tracking-tighter text-xl">KAULA</span>
+            <span class="text-orange-700 font-bold tracking-tighter text-xl uppercase">Kaula</span>
             <span class="text-stone-400 ml-2 text-sm uppercase tracking-widest">Research Archive</span>
         </div>
-        <div class="text-xs text-stone-500 font-mono">DB STATUS: CONNECTED</div>
+        <div id="dbStatus" class="text-xs text-stone-500 font-mono font-bold">DB STATUS: CONNECTING...</div>
     </nav>
 
-    <div class="flex flex-col md:flex-row">
-        <aside class="w-full md:w-72 bg-white border-r border-stone-200 p-6 sidebar sticky top-[72px]">
+    <div class="flex flex-col md:flex-row min-h-screen">
+        <aside class="w-full md:w-72 bg-white border-r border-stone-200 p-6 sticky top-[72px] h-fit">
             <h3 class="font-bold text-stone-900 uppercase text-xs tracking-widest mb-6">Advanced Filters</h3>
-            
             <div class="space-y-6">
                 <div>
                     <label class="block text-xs font-semibold text-stone-500 mb-2 uppercase">Subject / Tradition</label>
-                    <select id="filterSubject" onchange="applyFilters()" class="w-full bg-stone-50 border border-stone-200 rounded-lg p-2 text-sm outline-none">
+                    <select id="filterSubject" onchange="searchManuscripts()" class="w-full bg-stone-50 border border-stone-200 rounded-lg p-2 text-sm outline-none">
                         <option value="All">All Traditions</option>
-                        <option value="Kashmir Shaivism">Kashmir Shaivism</option>
-                        <option value="Tantra">Tantra</option>
-                        <option value="Agama">Agamic</option>
+                        <option value="MASTERFILENEWEST">Master Archive</option>
+                        <option value="SSTRS">Satsahasra Trans</option>
+                        <option value="SSDEV">Satsahasra Dev</option>
+                        <option value="AAJNAA">Aajuaa</option>
                     </select>
                 </div>
-
-                <div>
-                    <label class="block text-xs font-semibold text-stone-500 mb-2 uppercase">Century</label>
-                    <select id="filterEra" onchange="applyFilters()" class="w-full bg-stone-50 border border-stone-200 rounded-lg p-2 text-sm outline-none">
-                        <option value="All">All Eras</option>
-                        <option value="9th CE">9th Century</option>
-                        <option value="10th CE">10th Century</option>
-                        <option value="11th CE">11th Century</option>
-                    </select>
-                </div>
-
                 <div class="pt-4 border-t border-stone-100">
-                    <p class="text-[10px] text-stone-400 leading-relaxed italic">Tip: Use multi-filters to narrow down specific academic citations.</p>
+                    <p class="text-[10px] text-stone-400 leading-relaxed italic">Tip: Search results update automatically as you type.</p>
                 </div>
             </div>
         </aside>
@@ -56,9 +45,8 @@
         <main class="flex-1 p-8">
             <div class="max-w-5xl mx-auto">
                 <div class="mb-10 relative">
-                    <input type="text" id="universalSearch" oninput="applyFilters()" placeholder="Search Catalog No, IAST (Tantraloka), or Sanskrit (तन्त्रालोक)..." 
+                    <input type="text" id="universalSearch" placeholder="Search Catalog No, Title, or Folder..." 
                         class="w-full bg-white border-2 border-stone-200 rounded-2xl py-4 px-6 text-lg shadow-sm focus:border-orange-600 outline-none transition-all">
-                    <span class="absolute right-6 top-5 text-stone-300">⌘ F</span>
                 </div>
 
                 <div id="manuscriptGrid" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -66,103 +54,84 @@
             </div>
         </main>
     </div>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-<script>
-    // 1. SETUP - Replace with your actual credentials
-    const SUPABASE_URL = "https://gcgxcnbimqpfrowesfms.supabase.co";
-    const SUPABASE_KEY = "sb_publishable_XObSGljjo-VILprIHw_Bxw_FKM7uUOU"; 
-    // The 'sb_publishable' one
-    
-    // Change this line
-const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
-// And update your search function to use the new name:
-async function searchManuscripts() {
-    const searchTerm = document.getElementById('universalSearch').value;
-    const subjectFilter = document.getElementById('filterSubject').value;
-
-    let { data, error } = await supabaseClient  // Use 'supabaseClient' here
-        .from('manuscripts')
-        .select('*')
-        .ilike('search_blob', `%${searchTerm}%`)
-        .limit(20);
-
-    if (error) {
-        console.error("Database Error:", error);
-        return;
-    }
-    render(data);
-}
-    // 3. RENDER TO SCREEN
-    function render(data) {
-        const grid = document.getElementById('manuscriptGrid');
-        if (data.length === 0) {
-            grid.innerHTML = '<p class="col-span-2 text-stone-400 italic">No manuscripts found for this search.</p>';
-            return;
-        }
-
-        grid.innerHTML = data.map(m => `
-            <div class="bg-white border border-stone-200 rounded-xl p-6 hover:shadow-md transition cursor-pointer">
-                <div class="flex justify-between items-start mb-4">
-                    <span class="text-[10px] font-bold bg-stone-100 text-stone-500 px-2 py-1 rounded tracking-tighter">${m.catalog_no || 'Pending'}</span>
-                    <span class="text-[10px] uppercase font-bold text-orange-600 tracking-widest">${m.subject}</span>
-                </div>
-                <h3 class="serif text-xl text-stone-900">${m.title_iast}</h3>
-                <p class="text-stone-400 text-sm mb-4">${m.title_dev || 'Transcription in Progress'}</p>
-                <div class="flex justify-between text-[11px] text-stone-500 font-medium">
-                    <span>Author: ${m.author}</span>
-                    <span>Era: ${m.era}</span>
-                </div>
-            </div>
-        `).join('');
-    }
-
-    // Run initial search on load
-    document.addEventListener('DOMContentLoaded', searchManuscripts);
-</script>
     <script>
-        const manuscripts = [
-            { id: "MS-VNS-001", dev: "तन्त्रालोकः", iast: "Tantrāloka", author: "Abhinavagupta", era: "10th CE", subject: "Kashmir Shaivism" },
-            { id: "MS-VNS-002", dev: "शिवसूत्रम्", iast: "Śiva Sūtras", author: "Vasugupta", era: "9th CE", subject: "Agama" },
-            { id: "MS-VNS-003", dev: "स्पन्दकारिका", iast: "Spandakārikā", author: "Bhaṭṭa Kallaṭa", era: "9th CE", subject: "Kashmir Shaivism" },
-            { id: "MS-VNS-004", dev: "प्रत्यभिज्ञाहृदयम्", iast: "Pratyabhijñāhṛdayam", author: "Kṣemarāja", era: "11th CE", subject: "Kashmir Shaivism" }
-        ];
+        // --- 1. CONFIGURATION ---
+        const SUPABASE_URL = "https://gcgxcnbimqpfrowesfms.supabase.co";
+        const SUPABASE_KEY = "sb_publishable_XObSGljjo-VILprIHw_Bxw_FKM7uUOU"; 
 
-        function applyFilters() {
-            const search = document.getElementById('universalSearch').value.toLowerCase();
-            const subject = document.getElementById('filterSubject').value;
-            const era = document.getElementById('filterEra').value;
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-            const filtered = manuscripts.filter(m => {
-                const matchesSearch = m.iast.toLowerCase().includes(search) || m.dev.includes(search) || m.id.toLowerCase().includes(search);
-                const matchesSubject = subject === "All" || m.subject === subject;
-                const matchesEra = era === "All" || m.era === era;
-                return matchesSearch && matchesSubject && matchesEra;
-            });
+        // --- 2. SEARCH LOGIC ---
+        async function searchManuscripts() {
+            const searchTerm = document.getElementById('universalSearch').value;
+            const subjectFilter = document.getElementById('filterSubject').value;
+            const statusLabel = document.getElementById('dbStatus');
 
-            render(filtered);
+            let query = supabaseClient.from('manuscripts').select('*');
+
+            // Apply text search across the search_blob
+            if (searchTerm) {
+                query = query.ilike('search_blob', `%${searchTerm}%`);
+            }
+            
+            // Apply subject dropdown filter
+            if (subjectFilter !== "All") {
+                query = query.eq('subject', subjectFilter);
+            }
+
+            const { data, error } = await query.limit(40).order('id', { ascending: true });
+
+            if (error) {
+                console.error("Supabase Error:", error);
+                statusLabel.innerText = "DB STATUS: ERROR";
+                statusLabel.className = "text-xs text-red-600 font-mono font-bold";
+                return;
+            }
+
+            statusLabel.innerText = "DB STATUS: LIVE (" + data.length + " FOUND)";
+            statusLabel.className = "text-xs text-green-600 font-mono font-bold";
+            render(data);
         }
 
+        // --- 3. RENDER LOGIC ---
         function render(data) {
             const grid = document.getElementById('manuscriptGrid');
-            grid.innerHTML = data.map(m => `
-                <div class="bg-white border border-stone-200 rounded-xl p-6 hover:shadow-md transition cursor-pointer">
-                    <div class="flex justify-between items-start mb-4">
-                        <span class="text-[10px] font-bold bg-stone-100 text-stone-500 px-2 py-1 rounded tracking-tighter">${m.id}</span>
-                        <span class="text-[10px] uppercase font-bold text-orange-600 tracking-widest">${m.subject}</span>
+            if (!data || data.length === 0) {
+                grid.innerHTML = '<div class="col-span-2 p-12 text-center border-2 border-dashed border-stone-200 rounded-2xl"><p class="text-stone-400 italic">No manuscripts found matching your search.</p></div>';
+                return;
+            }
+
+            grid.innerHTML = data.map(m => {
+                // FALLBACK LOGIC: Handles different possible column names
+                const title = m.title_iast || m.Title_IAST || m.title || "Untitled Manuscript";
+                const dev = m.title_dev || m.Title_Dev || m.devanagari || "";
+                const subject = m.subject || "General";
+                const cat = m.catalog_no || m.id || "MS";
+
+                return `
+                    <div class="bg-white border border-stone-200 rounded-xl p-6 shadow-sm hover:shadow-md transition-all cursor-default">
+                        <div class="flex justify-between items-start mb-4">
+                            <span class="text-[10px] font-bold bg-stone-100 text-stone-500 px-2 py-1 rounded tracking-tighter">${cat}</span>
+                            <span class="text-[10px] uppercase font-bold text-orange-600 tracking-widest">${subject}</span>
+                        </div>
+                        <h3 class="serif text-xl text-stone-900 leading-tight">${title}</h3>
+                        <p class="text-stone-400 text-sm mb-4 mt-1">${dev}</p>
+                        <div class="flex justify-between text-[11px] text-stone-500 font-medium border-t border-stone-50 pt-4">
+                            <span>Author: ${m.author || 'Traditional'}</span>
+                            <span>Era: ${m.era || 'Unknown'}</span>
+                        </div>
                     </div>
-                    <h3 class="serif text-xl text-stone-900">${m.iast}</h3>
-                    <p class="text-stone-400 text-sm mb-4">${m.dev}</p>
-                    <div class="flex justify-between text-[11px] text-stone-500 font-medium">
-                        <span>Author: ${m.author}</span>
-                        <span>Period: ${m.era}</span>
-                    </div>
-                </div>
-            `).join('');
+                `;
+            }).join('');
         }
 
-        render(manuscripts);
+        // --- 4. EVENT LISTENERS ---
+        // Search automatically as you type
+        document.getElementById('universalSearch').addEventListener('input', searchManuscripts);
+        
+        // Load initial batch of data when the page opens
+        window.onload = searchManuscripts;
     </script>
 </body>
 </html>
